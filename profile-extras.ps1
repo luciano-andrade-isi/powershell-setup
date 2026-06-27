@@ -1,3 +1,49 @@
+# Lista os comandos disponiveis no profile e suas finalidades
+function info {
+    $commands = [ordered]@{
+        'profile-benchmark' = 'Core: mede o custo do profile. Exemplos: profile-benchmark; profile-benchmark -Count 10 -Warmup 2.'
+        'update-extras'     = 'Core: atualiza os extras. Exemplos: update-extras; update-extras -Status.'
+        up            = 'Sobe N niveis na arvore de diretorios. Exemplo: up 3.'
+        ex            = 'Abre o diretorio atual no Explorer.'
+        lsd           = 'Lista somente os diretorios da pasta atual.'
+        lsl           = 'Lista arquivos por data com tamanhos legiveis.'
+        gstatus       = 'Mostra o status resumido do repositorio Git.'
+        gcommit       = 'Adiciona todas as alteracoes e cria um commit.'
+        gpush         = 'Envia a branch e configura o upstream quando necessario.'
+        glog          = 'Exibe os 20 commits mais recentes em formato grafico.'
+        gclean        = 'Exclui branches locais ja mergeadas em main ou master.'
+        timer         = 'Cronometra uma tarefa ate que Enter seja pressionado.'
+        'copy-file'   = 'Copia o conteudo exato de um arquivo para o clipboard.'
+        ff            = 'Localiza arquivos recursivamente por parte do nome.'
+        grep          = 'Pesquisa um padrao no conteudo dos arquivos recursivamente.'
+        'folder-size' = 'Calcula o tamanho total de uma pasta.'
+        'ping-test'   = 'Executa um teste resumido de latencia e conectividade.'
+        dl            = 'Baixa rapidamente um arquivo de uma URL.'
+        myip          = 'Consulta o endereco IP publico atual.'
+        dsh           = 'Abre um shell interativo em um container Docker.'
+        reload        = 'Reinicia o PowerShell no mesmo terminal.'
+        garchive      = 'Cria um ZIP do HEAD e inclui arquivos adicionais opcionais.'
+        gchmod        = 'Altera o bit executavel de um arquivo no indice do Git.'
+        mkcd          = 'Cria um diretorio e entra nele.'
+        groot         = 'Navega para a raiz do repositorio Git atual.'
+        gundo         = 'Desfaz o ultimo commit mantendo as alteracoes no stage.'
+        ports         = 'Lista conexoes TCP locais e os processos responsaveis.'
+        'kill-port'   = 'Encerra o processo que esta escutando em uma porta TCP.'
+        extract       = 'Extrai arquivos ZIP, TAR, TAR.GZ, TGZ e GZIP.'
+        'path-copy'   = 'Copia um caminho absoluto para o clipboard.'
+        'json-format' = 'Formata JSON vindo de argumento, pipeline, arquivo ou clipboard.'
+        trash         = 'Envia arquivos e diretorios para a Lixeira do Windows.'
+        serve         = 'Inicia um servidor HTTP estatico usando Node.js.'
+        info          = 'Lista os comandos fornecidos pelo profile-extras e os comandos essenciais do core.'
+    }
+
+    $nameWidth = ($commands.Keys | Measure-Object -Property Length -Maximum).Maximum
+    foreach ($command in $commands.GetEnumerator()) {
+        Write-Host ($command.Key.PadRight($nameWidth + 2)) -ForegroundColor Cyan -NoNewline
+        Write-Host $command.Value -ForegroundColor DarkGray
+    }
+}
+
 # Sobe N niveis de uma vez
 function up {
     [CmdletBinding()]
@@ -670,48 +716,4 @@ server.listen(port, host);
 
     Write-Host "Servidor em http://$Bind`:$Port/ (Ctrl+C para encerrar)" -ForegroundColor Cyan
     & $node.Source -e $serverScript $directory $Port $Bind
-}
-
-# Lista os comandos disponiveis neste arquivo e suas finalidades
-function info {
-    $commands = [ordered]@{
-        up            = 'Sobe N niveis na arvore de diretorios. Exemplo: up 3.'
-        ex            = 'Abre o diretorio atual no Explorer.'
-        lsd           = 'Lista somente os diretorios da pasta atual.'
-        lsl           = 'Lista arquivos por data com tamanhos legiveis.'
-        gstatus       = 'Mostra o status resumido do repositorio Git.'
-        gcommit       = 'Adiciona todas as alteracoes e cria um commit.'
-        gpush         = 'Envia a branch e configura o upstream quando necessario.'
-        glog          = 'Exibe os 20 commits mais recentes em formato grafico.'
-        gclean        = 'Exclui branches locais ja mergeadas em main ou master.'
-        timer         = 'Cronometra uma tarefa ate que Enter seja pressionado.'
-        'copy-file'   = 'Copia o conteudo exato de um arquivo para o clipboard.'
-        ff            = 'Localiza arquivos recursivamente por parte do nome.'
-        grep          = 'Pesquisa um padrao no conteudo dos arquivos recursivamente.'
-        'folder-size' = 'Calcula o tamanho total de uma pasta.'
-        'ping-test'   = 'Executa um teste resumido de latencia e conectividade.'
-        dl            = 'Baixa rapidamente um arquivo de uma URL.'
-        myip          = 'Consulta o endereco IP publico atual.'
-        dsh           = 'Abre um shell interativo em um container Docker.'
-        reload        = 'Reinicia o PowerShell no mesmo terminal.'
-        garchive      = 'Cria um ZIP do HEAD e inclui arquivos adicionais opcionais.'
-        gchmod        = 'Altera o bit executavel de um arquivo no indice do Git.'
-        mkcd          = 'Cria um diretorio e entra nele.'
-        groot         = 'Navega para a raiz do repositorio Git atual.'
-        gundo         = 'Desfaz o ultimo commit mantendo as alteracoes no stage.'
-        ports         = 'Lista conexoes TCP locais e os processos responsaveis.'
-        'kill-port'   = 'Encerra o processo que esta escutando em uma porta TCP.'
-        extract       = 'Extrai arquivos ZIP, TAR, TAR.GZ, TGZ e GZIP.'
-        'path-copy'   = 'Copia um caminho absoluto para o clipboard.'
-        'json-format' = 'Formata JSON vindo de argumento, pipeline, arquivo ou clipboard.'
-        trash         = 'Envia arquivos e diretorios para a Lixeira do Windows.'
-        serve         = 'Inicia um servidor HTTP estatico usando Node.js.'
-        info          = 'Lista todos os comandos fornecidos pelo profile-extras.'
-    }
-
-    $nameWidth = ($commands.Keys | Measure-Object -Property Length -Maximum).Maximum
-    foreach ($command in $commands.GetEnumerator()) {
-        Write-Host ($command.Key.PadRight($nameWidth + 2)) -ForegroundColor Cyan -NoNewline
-        Write-Host $command.Value -ForegroundColor DarkGray
-    }
 }

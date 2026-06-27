@@ -13,8 +13,10 @@ Network synchronization of extras must remain an explicit manual operation;
 profile startup must not perform network requests.
 
 The `info` function in `profile-extras.ps1` is the user-facing command catalog.
-Installer module availability, defaults, and behavior are documented in
-`README.md`.
+In addition to every command defined in that file, the catalog must always
+include the core commands `profile-benchmark` and `update-extras`, with usage
+examples for both. Installer module availability, defaults, and behavior are
+documented in `README.md`.
 
 ## Git Commit Message Instructions
 
