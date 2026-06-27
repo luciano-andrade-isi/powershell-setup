@@ -15,7 +15,7 @@ function info {
         timer         = 'Cronometra uma tarefa ate que Enter seja pressionado.'
         'copy-file'   = 'Copia o conteudo exato de um arquivo para o clipboard.'
         ff            = 'Localiza arquivos recursivamente por parte do nome.'
-        grep          = 'Filtra texto do pipeline ou pesquisa arquivos. Exemplo: ps | grep pwsh.'
+        grep          = 'Filtra a saida recebida pelo pipeline. Exemplo: ps | grep pwsh.'
         'folder-size' = 'Calcula o tamanho total de uma pasta.'
         'ping-test'   = 'Executa um teste resumido de latencia e conectividade.'
         dl            = 'Baixa rapidamente um arquivo de uma URL.'
@@ -34,13 +34,19 @@ function info {
         'json-format' = 'Formata JSON vindo de argumento, pipeline, arquivo ou clipboard.'
         trash         = 'Envia arquivos e diretorios para a Lixeira do Windows.'
         serve         = 'Inicia um servidor HTTP estatico usando Node.js.'
-        info          = 'Lista os comandos fornecidos pelo profile-extras e os comandos essenciais do core.'
+        info          = 'Lista os comandos do profile e permite filtragem por pipeline.'
     }
 
     $nameWidth = ($commands.Keys | Measure-Object -Property Length -Maximum).Maximum
+    $supportsAnsi = $null -ne (Get-Variable -Name PSStyle -ErrorAction SilentlyContinue)
     foreach ($command in $commands.GetEnumerator()) {
-        Write-Host ($command.Key.PadRight($nameWidth + 2)) -ForegroundColor Cyan -NoNewline
-        Write-Host $command.Value -ForegroundColor DarkGray
+        $name = $command.Key.PadRight($nameWidth + 2)
+        if ($supportsAnsi) {
+            "$($PSStyle.Foreground.Cyan)$name$($PSStyle.Foreground.BrightBlack)$($command.Value)$($PSStyle.Reset)"
+        }
+        else {
+            "$name$($command.Value)"
+        }
     }
 }
 
@@ -197,16 +203,13 @@ function ff {
     Get-ChildItem -LiteralPath $Path -Recurse -File -Filter "*$Name*" -ErrorAction SilentlyContinue
 }
 
-# Filtra a saida do pipeline ou pesquisa recursivamente em arquivos
+# Filtra a saida recebida pelo pipeline
 function grep {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, Position = 0)]
         [ValidateNotNullOrEmpty()]
         [string]$Pattern,
-
-        [Parameter(Position = 1)]
-        [string]$Path = '.',
 
         [Parameter(ValueFromPipeline)]
         [AllowNull()]
@@ -233,6 +236,11 @@ function grep {
         }
     }
     end {
+        if (-not $expectsPipelineInput) {
+            Write-Error 'grep requer entrada pelo pipeline. Exemplo: ps | grep pwsh'
+            return
+        }
+
         $searchParameters = @{
             Pattern       = $Pattern
             SimpleMatch   = $SimpleMatch
@@ -243,14 +251,8 @@ function grep {
             $searchParameters.Context = $Context
         }
 
-        if ($expectsPipelineInput) {
-            $pipelineItems |
-                Out-String -Stream -Width 4096 |
-                Select-String @searchParameters
-            return
-        }
-
-        Get-ChildItem -LiteralPath $Path -Recurse -File -ErrorAction SilentlyContinue |
+        $pipelineItems |
+            Out-String -Stream -Width 4096 |
             Select-String @searchParameters
     }
 }
