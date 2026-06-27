@@ -15,7 +15,7 @@ function info {
         timer         = 'Cronometra uma tarefa ate que Enter seja pressionado.'
         'copy-file'   = 'Copia o conteudo exato de um arquivo para o clipboard.'
         ff            = 'Localiza arquivos recursivamente por parte do nome.'
-        grep          = 'Pesquisa um padrao no conteudo dos arquivos recursivamente.'
+        grep          = 'Filtra texto do pipeline ou pesquisa arquivos. Exemplo: ps | grep pwsh.'
         'folder-size' = 'Calcula o tamanho total de uma pasta.'
         'ping-test'   = 'Executa um teste resumido de latencia e conectividade.'
         dl            = 'Baixa rapidamente um arquivo de uma URL.'
@@ -197,19 +197,62 @@ function ff {
     Get-ChildItem -LiteralPath $Path -Recurse -File -Filter "*$Name*" -ErrorAction SilentlyContinue
 }
 
-# Grep recursivo com objetos MatchInfo coloridos pelo PowerShell
+# Filtra a saida do pipeline ou pesquisa recursivamente em arquivos
 function grep {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory, Position = 0)]
         [ValidateNotNullOrEmpty()]
         [string]$Pattern,
 
-        [string]$Path = '.'
+        [Parameter(Position = 1)]
+        [string]$Path = '.',
+
+        [Parameter(ValueFromPipeline)]
+        [AllowNull()]
+        [psobject]$InputObject,
+
+        [Alias('F')]
+        [switch]$SimpleMatch,
+
+        [switch]$CaseSensitive,
+
+        [Alias('v')]
+        [switch]$NotMatch,
+
+        [int[]]$Context
     )
 
-    Get-ChildItem -LiteralPath $Path -Recurse -File -ErrorAction SilentlyContinue |
-        Select-String -Pattern $Pattern
+    begin {
+        $expectsPipelineInput = $MyInvocation.ExpectingInput
+        $pipelineItems = [System.Collections.Generic.List[object]]::new()
+    }
+    process {
+        if ($expectsPipelineInput) {
+            $pipelineItems.Add($InputObject)
+        }
+    }
+    end {
+        $searchParameters = @{
+            Pattern       = $Pattern
+            SimpleMatch   = $SimpleMatch
+            CaseSensitive = $CaseSensitive
+            NotMatch      = $NotMatch
+        }
+        if ($PSBoundParameters.ContainsKey('Context')) {
+            $searchParameters.Context = $Context
+        }
+
+        if ($expectsPipelineInput) {
+            $pipelineItems |
+                Out-String -Stream -Width 4096 |
+                Select-String @searchParameters
+            return
+        }
+
+        Get-ChildItem -LiteralPath $Path -Recurse -File -ErrorAction SilentlyContinue |
+            Select-String @searchParameters
+    }
 }
 
 # Calcula o tamanho total de uma pasta
