@@ -2,7 +2,19 @@
 
 ## Product Context
 
-TODO
+This repository provides a modular PowerShell profile installer optimized for
+interactive terminal use without adding unnecessary startup work to automation,
+CI pipelines, or agent sessions.
+
+`Install-PowerShellProfile.ps1` generates a lightweight core profile, an
+interactive profile for prompts, completions, and optional modules, and a
+`profile-extras.ps1` file for personal commands and quality-of-life helpers.
+Network synchronization of extras must remain an explicit manual operation;
+profile startup must not perform network requests.
+
+The `info` function in `profile-extras.ps1` is the user-facing command catalog.
+Installer module availability, defaults, and behavior are documented in
+`README.md`.
 
 ## Git Commit Message Instructions
 
@@ -42,3 +54,11 @@ feat(module): add git module
 fix(auth): update fine-grained token permission template
 docs(readme): document feature instructions
 ```
+
+## Verification
+
+- Whenever a function is created or modified in `profile-extras.ps1`, update
+  the `info` function so its command catalog and description remain accurate.
+- Whenever a module is added to or removed from
+  `Install-PowerShellProfile.ps1`, update `README.md` so the documented module
+  inventory and behavior remain accurate.
