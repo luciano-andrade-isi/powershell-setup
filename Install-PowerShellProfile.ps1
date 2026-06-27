@@ -9,15 +9,16 @@
 
     - profile-core.ps1         funcoes leves e comando manual update-extras
     - profile-interactive.ps1  Oh My Posh, PSReadLine, completions e lazy-loads
-    - profile-extras.ps1       aliases/funcoes pessoais sincronizaveis por Gist
+    - profile-extras.ps1       aliases/funcoes pessoais sincronizaveis pelo GitHub
 
-    O Gist nao e consultado na abertura do terminal. A atualizacao de extras
-    acontece apenas quando o usuario executa update-extras.
+    O repositorio remoto nao e consultado na abertura do terminal. A atualizacao
+    de extras acontece apenas quando o usuario executa update-extras.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [string]$ExtrasGistUrl = "https://gist.githubusercontent.com/luciano-andrade-isi/32fcd6ec4b0171dd4464b1d0ab37479d/raw/profile-extras.ps1",
+    [Alias("ExtrasGistUrl")]
+    [string]$ExtrasSourceUrl = "https://raw.githubusercontent.com/luciano-andrade-isi/powershell-setup/main/profile-extras.ps1",
 
     [string]$ConfigDir,
 
@@ -367,7 +368,7 @@ function Get-RemoteExtras {
     $content = (Invoke-WebRequest -Uri $Url -UseBasicParsing -ErrorAction Stop).Content
 
     if ([string]::IsNullOrWhiteSpace($content)) {
-        throw "O Gist retornou profile-extras.ps1 vazio."
+        throw "A fonte remota retornou profile-extras.ps1 vazio."
     }
 
     $parseErrors = $null
@@ -402,7 +403,7 @@ function ConvertTo-EmptyIfNull {
 $coreFile = Join-Path $ConfigDir "profile-core.ps1"
 $interactiveFile = Join-Path $ConfigDir "profile-interactive.ps1"
 $extrasFile = Join-Path $ConfigDir "profile-extras.ps1"
-$syncFile = Join-Path $ConfigDir "gist-sync.json"
+$syncFile = Join-Path $ConfigDir "extras-sync.json"
 $zoxideCache = Join-Path $ConfigDir "zoxide-init.ps1"
 $customOmpTheme = Join-Path $ConfigDir "paradox-local-ssh.omp.json"
 
@@ -411,7 +412,7 @@ Write-Host "PowerShell Profile Installer" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Profile alvo : $ProfilePath"
 Write-Host "Config dir   : $ConfigDir"
-Write-Host "Extras gist  : $ExtrasGistUrl"
+Write-Host "Fonte extras : $ExtrasSourceUrl"
 Write-Host ""
 
 $enableOhMyPosh = $true
@@ -428,7 +429,7 @@ $installDocker = $false
 $installWinGet = $true
 $installFzf = $true
 $installCompletion = $true
-$enableGistSync = $true
+$enableExtrasSync = $true
 $downloadInitialExtras = -not $SkipInitialExtrasDownload
 
 Write-Host "Itens que serao instalados/ativados por padrao:" -ForegroundColor Cyan
@@ -440,11 +441,11 @@ Write-InstallItem "Terminal-Icons" "icones em ls/dir carregados apenas no primei
 Write-InstallItem "WinGet native completion" "autocompletar argumentos do winget"
 Write-InstallItem "fzf + PSFzf" "busca interativa no historico e arquivos com Ctrl+r/Ctrl+t"
 Write-InstallItem "CompletionPredictor" "predicoes contextuais; usado somente com Plugin/HistoryAndPlugin"
-Write-InstallItem "Gist Sync manual por update-extras" "atualiza profile-extras.ps1 somente quando chamado"
+Write-InstallItem "GitHub Sync manual por update-extras" "atualiza profile-extras.ps1 somente quando chamado"
 if ($downloadInitialExtras) {
     Write-InstallItem "Download inicial do profile-extras.ps1" "baixa os extras uma vez durante a instalacao"
 } else {
-    Write-InstallItem "profile-extras.ps1 local padrao" "cria extras locais sem consultar o Gist agora"
+    Write-InstallItem "profile-extras.ps1 local padrao" "cria extras locais sem consultar o GitHub agora"
 }
 Write-Host ""
 Write-Host "Itens desativados por padrao:" -ForegroundColor DarkGray
@@ -508,10 +509,10 @@ if ($installAction -eq 1) {
     $installDocker = Confirm-Option "Instalar/ativar DockerCompletion por lazy-load no primeiro docker?" $installDocker
     $installWinGet = Confirm-Option "Configurar autocompletar nativo do WinGet?" $installWinGet
     $installFzf = Confirm-Option "Instalar/ativar fzf + PSFzf para busca interativa?" $installFzf
-    $enableGistSync = Confirm-Option "Habilitar Gist Sync manual por update-extras?" $enableGistSync
+    $enableExtrasSync = Confirm-Option "Habilitar GitHub Sync manual por update-extras?" $enableExtrasSync
     $downloadInitialExtras = $false
-    if ($enableGistSync -and -not $SkipInitialExtrasDownload) {
-        $downloadInitialExtras = Confirm-Option "Baixar profile-extras.ps1 inicial do Gist agora?" $true
+    if ($enableExtrasSync -and -not $SkipInitialExtrasDownload) {
+        $downloadInitialExtras = Confirm-Option "Baixar profile-extras.ps1 inicial do GitHub agora?" $true
     }
 
     Write-Host ""
@@ -530,7 +531,7 @@ if ($installAction -eq 1) {
     Write-Host "WinGet complete  : $(if ($installWinGet) { 'Sim' } else { 'Nao' })"
     Write-Host "fzf + PSFzf      : $(if ($installFzf) { 'Sim' } else { 'Nao' })"
     Write-Host "CompletionPredict: $(if ($installCompletion) { 'Sim' } else { 'Nao' })"
-    Write-Host "Gist Sync manual : $(if ($enableGistSync) { 'Sim' } else { 'Nao' })"
+    Write-Host "GitHub Sync manual: $(if ($enableExtrasSync) { 'Sim' } else { 'Nao' })"
     Write-Host "Download inicial : $(if ($downloadInitialExtras) { 'Sim' } else { 'Nao' })"
     Write-Host ""
 
@@ -860,7 +861,7 @@ exit 0
 
 '@
 
-$coreSyncBlock = if ($enableGistSync) {
+$coreSyncBlock = if ($enableExtrasSync) {
 @'
 function New-ExtrasBackup {
     param(
@@ -903,7 +904,7 @@ function Update-Extras {
     try {
         $cfg = Get-Content -Raw -LiteralPath $configFile | ConvertFrom-Json -ErrorAction Stop
         if (-not $cfg.syncUrl -or -not $cfg.extrasFile) {
-            throw 'gist-sync.json nao possui syncUrl ou extrasFile.'
+            throw 'extras-sync.json nao possui syncUrl ou extrasFile.'
         }
 
         $head = Invoke-WebRequest -Uri $cfg.syncUrl -Method HEAD -UseBasicParsing -ErrorAction Stop
@@ -953,7 +954,7 @@ function Update-Extras {
             if (-not (Test-Path -LiteralPath $temporaryFile) -or
                 (Get-Item -LiteralPath $temporaryFile).Length -eq 0 -or
                 [string]::IsNullOrWhiteSpace((Get-Content -Raw -LiteralPath $temporaryFile))) {
-                throw 'O Gist retornou profile-extras.ps1 vazio.'
+                throw 'A fonte remota retornou profile-extras.ps1 vazio.'
             }
 
             $parseErrors = $null
@@ -993,7 +994,7 @@ function Update-Extras {
 '@
 } else {
 @'
-# Gist Sync manual desabilitado nesta instalacao.
+# GitHub Sync manual desabilitado nesta instalacao.
 '@
 }
 
@@ -1505,13 +1506,13 @@ $lastModified = $null
 if ($downloadInitialExtras) {
     Write-Step "Baixando profile-extras inicial"
     try {
-        $remoteExtras = Get-RemoteExtras -Url $ExtrasGistUrl
+        $remoteExtras = Get-RemoteExtras -Url $ExtrasSourceUrl
         Set-Content -LiteralPath $extrasFile -Value $remoteExtras.Content -Encoding UTF8
         $etag = $remoteExtras.ETag
         $lastModified = $remoteExtras.LastModified
-        Write-Ok "profile-extras baixado do Gist"
+        Write-Ok "profile-extras baixado do GitHub"
     } catch {
-        Write-Warn "Falha ao baixar extras do Gist. Usando extras padrao locais. Erro: $_"
+        Write-Warn "Falha ao baixar extras do GitHub. Usando extras padrao locais. Erro: $_"
         Set-Content -LiteralPath $extrasFile -Value $defaultExtras -Encoding UTF8
     }
 } else {
@@ -1519,9 +1520,9 @@ if ($downloadInitialExtras) {
     Set-Content -LiteralPath $extrasFile -Value $defaultExtras -Encoding UTF8
 }
 
-if ($enableGistSync) {
+if ($enableExtrasSync) {
     $syncConfig = [ordered]@{
-        syncUrl = $ExtrasGistUrl
+        syncUrl = $ExtrasSourceUrl
         etag = $etag
         lastModified = $lastModified
         lastChecked = (Get-Date).ToString('o')
@@ -1530,13 +1531,13 @@ if ($enableGistSync) {
 
     Set-Content -LiteralPath $syncFile -Value ($syncConfig | ConvertTo-Json) -Encoding UTF8
 } else {
-    Write-Warn "Gist Sync manual desabilitado; gist-sync.json nao foi atualizado."
+    Write-Warn "GitHub Sync manual desabilitado; extras-sync.json nao foi atualizado."
 }
 
 Write-Host ""
 Write-Ok "Instalacao concluida."
 Write-Host "Abra um novo terminal interativo ou rode: . `$PROFILE" -ForegroundColor Yellow
-if ($enableGistSync) {
+if ($enableExtrasSync) {
     Write-Host "Para atualizar extras manualmente: update-extras" -ForegroundColor Yellow
     Write-Host "Para consultar o estado sem baixar: update-extras -Status" -ForegroundColor DarkGray
 }

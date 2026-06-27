@@ -6,8 +6,8 @@ carregados somente em sessões interativas. Automações, pipelines e agentes
 recebem apenas o core leve.
 
 O instalador não consulta a rede durante a abertura do PowerShell. A
-sincronização do `profile-extras.ps1` acontece somente quando o comando
-`update-extras` é executado manualmente.
+sincronização do `profile-extras.ps1` usa o arquivo publicado neste repositório
+e acontece somente quando o comando `update-extras` é executado manualmente.
 
 ## Instalação rápida
 
@@ -21,7 +21,7 @@ Antes de alterar arquivos, o instalador mostra:
 
 - o caminho do profile que será utilizado;
 - o diretório dos arquivos modulares;
-- a URL configurada para o Gist de extras;
+- a URL configurada para a fonte remota de extras;
 - os componentes habilitados e desabilitados por padrão.
 
 Em seguida, oferece três opções:
@@ -35,6 +35,10 @@ Depois da instalação, abra um terminal novo ou recarregue o profile:
 ```powershell
 . $PROFILE
 ```
+
+Instalações anteriores que ainda usam `gist-sync.json` e a URL do Gist devem
+executar o instalador novamente. A reinstalação recria o profile core e grava
+`extras-sync.json` apontando para o arquivo raw deste repositório.
 
 ## Caminhos utilizados
 
@@ -54,7 +58,7 @@ Os arquivos auxiliares ficam ao lado do profile, em `.config\pwsh`:
     |-- profile-extras.ps1
     |-- paradox-local-ssh.omp.json
     |-- oh-my-posh-init.ps1
-    |-- gist-sync.json
+    |-- extras-sync.json
     |-- zoxide-init.ps1
     `-- .backups/
 ```
@@ -87,7 +91,7 @@ pwsh
 
 É carregado antes do early return e contém apenas funções leves:
 
-- `update-extras`: atualização manual do Gist;
+- `update-extras`: atualização manual pelo arquivo raw deste repositório;
 - `profile-benchmark`: medição do custo do profile;
 - `rebuild-zoxide-cache`: reconstrução manual do cache do Zoxide;
 - funções internas de detecção, backup e instrumentação.
@@ -103,7 +107,7 @@ completions e integrações opcionais.
 ### profile-extras.ps1
 
 É carregado por último, somente em sessões visuais. Destina-se a aliases,
-funções e preferências pessoais que podem ser mantidas em um Gist.
+funções e preferências pessoais mantidas neste repositório.
 
 ## Configuração padrão
 
@@ -119,7 +123,7 @@ funções e preferências pessoais que podem ser mantidas em um Gist.
 | fzf e PSFzf             | Ativo    | Importa PSFzf no primeiro `Ctrl+r` ou `Ctrl+t`.          |
 | posh-git                | Inativo  | Pode ser habilitado com lazy-load no primeiro `git`.     |
 | DockerCompletion        | Inativo  | Pode ser habilitado com lazy-load no primeiro `docker`.  |
-| Gist Sync               | Ativo    | Atualização somente por `update-extras`.                 |
+| GitHub Sync             | Ativo    | Atualização somente por `update-extras`.                 |
 
 No PowerShell 7, módulos são instalados preferencialmente com
 `Install-PSResource`. Se PSResourceGet não estiver disponível ou falhar, o
@@ -168,7 +172,7 @@ Ao escolher `configurar instalação`, é possível ajustar:
 - DockerCompletion;
 - completion do WinGet;
 - fzf e PSFzf;
-- Gist Sync e download inicial dos extras.
+- GitHub Sync e download inicial dos extras.
 
 ## Parâmetros do instalador
 
@@ -176,17 +180,17 @@ Ao escolher `configurar instalação`, é possível ajustar:
 | ---------------------------- | ------------------------------------------------------------------------------- |
 | `-ProfilePath`               | Caminho do profile principal. O padrão é `$PROFILE.CurrentUserCurrentHost`.     |
 | `-ConfigDir`                 | Diretório dos arquivos modulares. O padrão é `.config\pwsh` ao lado do profile. |
-| `-ExtrasGistUrl`             | URL raw do `profile-extras.ps1`.                                                |
-| `-SkipInitialExtrasDownload` | Não consulta o Gist durante a instalação e cria os extras locais padrão.        |
+| `-ExtrasSourceUrl`           | URL raw do `profile-extras.ps1`; aceita `-ExtrasGistUrl` como alias legado.     |
+| `-SkipInitialExtrasDownload` | Não consulta o GitHub durante a instalação e cria os extras locais padrão.      |
 | `-Force`                     | Aceita a opção inicial padrão e instala sem perguntas adicionais.               |
 
-Exemplo com caminhos e Gist personalizados:
+Exemplo com caminhos e fonte de extras personalizados:
 
 ```powershell
 .\Install-PowerShellProfile.ps1 `
     -ProfilePath 'D:\Documentos\PowerShell\Microsoft.PowerShell_profile.ps1' `
     -ConfigDir 'D:\Documentos\PowerShell\.config\pwsh' `
-    -ExtrasGistUrl 'https://gist.githubusercontent.com/usuario/id/raw/profile-extras.ps1'
+    -ExtrasSourceUrl 'https://raw.githubusercontent.com/usuario/repositorio/main/profile-extras.ps1'
 ```
 
 ## Como funciona o profile-extras
@@ -195,12 +199,12 @@ Exemplo com caminhos e Gist personalizados:
 
 Quando o download inicial está habilitado, o instalador:
 
-1. consulta os metadados HTTP do Gist;
+1. consulta os metadados HTTP do arquivo raw no GitHub;
 2. baixa o conteúdo raw;
 3. rejeita conteúdo vazio;
 4. valida a sintaxe com o parser oficial do PowerShell;
 5. grava `profile-extras.ps1`;
-6. salva URL, ETag, Last-Modified e timestamp em `gist-sync.json`.
+6. salva URL, ETag, Last-Modified e timestamp em `extras-sync.json`.
 
 Se o download ou a validação falhar, o instalador usa o arquivo local padrão.
 
@@ -237,7 +241,7 @@ A atualização segue este fluxo:
 4. valida o parse completo do script;
 5. cria backup do extras atual;
 6. substitui o arquivo somente depois da validação;
-7. atualiza `gist-sync.json` por arquivo temporário.
+7. atualiza `extras-sync.json` por arquivo temporário.
 
 O arquivo carregado na sessão atual não muda automaticamente. Depois da
 atualização, abra um terminal novo ou execute:
@@ -247,8 +251,8 @@ atualização, abra um terminal novo ou execute:
 ```
 
 Edições locais em `profile-extras.ps1` serão substituídas na próxima
-sincronização. Para torná-las permanentes, atualize o Gist correspondente ou
-desabilite o Gist Sync em uma nova instalação.
+sincronização. Para torná-las permanentes, faça commit e push do arquivo neste
+repositório ou desabilite o GitHub Sync em uma nova instalação.
 
 ## Cache do Zoxide
 
